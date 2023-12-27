@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>YSJU.ClientRegistrationSystem</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\YSJU.ClientRegistrationSystem.Domain\YSJU.ClientRegistrationSystem.Domain.csproj" />
+    <ProjectReference Include="..\YSJU.ClientRegistrationSystem.Application.Contracts\YSJU.ClientRegistrationSystem.Application.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EPPlus" Version="7.0.3" />
+    <PackageReference Include="Volo.Abp.Account.Application" Version="7.4.2" />
+    <PackageReference Include="Volo.Abp.Identity.Application" Version="7.4.2" />
+    <PackageReference Include="Volo.Abp.PermissionManagement.Application" Version="7.4.2" />
+    <PackageReference Include="Volo.Abp.TenantManagement.Application" Version="7.4.2" />
+    <PackageReference Include="Volo.Abp.FeatureManagement.Application" Version="7.4.2" />
+    <PackageReference Include="Volo.Abp.SettingManagement.Application" Version="7.4.2" />
+  </ItemGroup>
+
+</Project>

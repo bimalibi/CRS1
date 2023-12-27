@@ -1,0 +1,6 @@
+﻿namespace YSJU.ClientRegistrationSystem;
+
+public static class ClientRegistrationSystemDomainErrorCodes
+{
+    /* You can add your business exception error codes here, as constants */
+}
