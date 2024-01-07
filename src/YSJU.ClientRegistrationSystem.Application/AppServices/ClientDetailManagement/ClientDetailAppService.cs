@@ -60,10 +60,20 @@ namespace YSJU.ClientRegistrationSystem.AppServices.ClientDetailManagement
                     throw new UserFriendlyException("Phone number already exist", code: "400");
                 }
 
-                var nextClientId = clientPersonalDetailQuery.Select(x => x.ClientId).Max();
+                var nextClient = clientPersonalDetailQuery.Any();
+                int clientId = 0;
+                if (nextClient)
+                {
+                    clientId = clientPersonalDetailQuery.Select(x => x.ClientId).Max() + 1;
+                }
+                else
+                {
+                    clientId = 100;
+                }
+
                 var newClientPersonalDetails = new ClientDetail
                 {
-                    ClientId = (nextClientId  == 0) ? 100 : nextClientId + 1,
+                    ClientId = clientId,
                     FirstName = input.FirstName,
                     MiddleName = input.MiddleName,
                     LastName = input.LastName,
