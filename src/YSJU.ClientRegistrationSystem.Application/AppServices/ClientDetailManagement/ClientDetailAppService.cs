@@ -20,6 +20,7 @@ using System.IO;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using YSJU.ClientRegistrationSystem.AppEntities.ClientProductCategories;
+using YSJU.ClientRegistrationSystem.Dtos.ProductCategoryManagementDtos;
 
 namespace YSJU.ClientRegistrationSystem.AppServices.ClientDetailManagement
 {
@@ -409,6 +410,27 @@ namespace YSJU.ClientRegistrationSystem.AppServices.ClientDetailManagement
             catch (Exception)
             {
                 Logger.LogError(nameof(ExportAllClientDetail));
+                throw;
+            }
+        }
+
+        public async Task<List<ProductCategoryResponseDto>> GetProductCategoryListAsync()
+        {
+            try
+            {
+                var peoductCategoryQuery = await _productCategoryRepository.GetQueryableAsync();
+
+                var result = peoductCategoryQuery.Select(x => new ProductCategoryResponseDto
+                {
+                    ProductCategoryId = x.Id,
+                    ProductCategoryName = x.DisplayName
+                }).ToList();
+
+                return result;
+            }
+            catch (Exception)
+            {
+                Logger.LogError(nameof(GetProductCategoryListAsync));
                 throw;
             }
         }
