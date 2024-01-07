@@ -128,28 +128,47 @@ namespace YSJU.ClientRegistrationSystem.AppServices.ClientDetailManagement
                 var clientPersonalDetail = clientPersonalDetailQuery.Where(x => x.Id == clientPersonalDetailId).FirstOrDefault()
                     ?? throw new UserFriendlyException("Client Personal Detail not found", code: "400");
 
-                var clientPersonalDetailData = (from clientPersonalDetails in clientPersonalDetailQuery
-                                                join clientProductCategory in clientProductCategoryQuery on clientPersonalDetail.Id equals clientProductCategory.ClientId into clientProductCategoryLeft
-                                                from clientProductCategory in clientProductCategoryLeft.DefaultIfEmpty()
+                var productCategoryListQuery = (from clientProductCategory in clientProductCategoryQuery
                                                 join productCategory in productCategoryQuery on clientProductCategory.ProductCategoryId equals productCategory.Id into productCategoryLeft
                                                 from productCategory in productCategoryLeft.DefaultIfEmpty()
-                                                where clientPersonalDetail.Id == clientPersonalDetailId
-                                                select new ClientDetailResponseDto
+                                                select new
                                                 {
-                                                    ClientId = clientPersonalDetail.ClientId,
-                                                    FirstName = clientPersonalDetail.FirstName,
-                                                    MiddleName = clientPersonalDetail.MiddleName,
-                                                    LastName = clientPersonalDetail.LastName,
-                                                    Address = clientPersonalDetail.Address,
-                                                    PhoneNumber = clientPersonalDetail.PhoneNumber,
-                                                    Email = clientPersonalDetail.Email,
-                                                    ProductCategoryId = clientProductCategory.Id,
+                                                    ClientDetailId = clientProductCategory.ClientId,
                                                     ProductCategoryName = productCategory.DisplayName,
-                                                }).FirstOrDefault();
+                                                    ProductCategoryId = clientProductCategory.ProductCategoryId
+                                                }).GroupBy(x => new
+                                                {
+                                                    x.ClientDetailId
+                                                }).Select(x => new
+                                                {
+                                                    ClientDetailId = x.Key.ClientDetailId,
+                                                    ProductCategoryList = x.Select(x => new ProductCategoryDto
+                                                    {
+                                                        ProductCategoryId = x.ProductCategoryId,
+                                                        ProductCategoryName = x.ProductCategoryName
+                                                    }).ToList()
+                                                });
+
+                var query = (from clientDetail in clientPersonalDetailQuery
+                             join agg in productCategoryListQuery on clientDetail.Id equals agg.ClientDetailId
+                             where clientDetail.Id == clientPersonalDetailId
+                             select new ClientDetailResponseDto
+                             {
+                                 Id = clientDetail.Id,
+                                 ClientId = clientDetail.ClientId,
+                                 FirstName = clientDetail.FirstName,
+                                 MiddleName = clientDetail.MiddleName,
+                                 LastName = clientDetail.LastName,
+                                 Address = clientDetail.Address,
+                                 PhoneNumber = clientDetail.PhoneNumber,
+                                 Email = clientDetail.Email,
+                                 ProductCategory = agg.ProductCategoryList,
+                                 CreationTime = clientDetail.CreationTime
+                             }).FirstOrDefault();
 
                 Logger.LogInformation($"GetClientDetailById responded for User: {CurrentUser.Id}");
 
-                return clientPersonalDetailData;
+                return query;
             }
             catch (Exception)
             {
@@ -246,11 +265,29 @@ namespace YSJU.ClientRegistrationSystem.AppServices.ClientDetailManagement
                         x.Email.ToLower().Contains(input.SearchKeyword.ToLower()));
                 }
 
+                var productCategoryListQuery = (from clientProductCategory in clientProductCategoryQuery
+                                                join productCategory in productCategoryQuery on clientProductCategory.ProductCategoryId equals productCategory.Id into productCategoryLeft
+                                                from productCategory in productCategoryLeft.DefaultIfEmpty()
+                                                select new
+                                                {
+                                                    ClientDetailId = clientProductCategory.ClientId,
+                                                    ProductCategoryName = productCategory.DisplayName,
+                                                    ProductCategoryId = clientProductCategory.ProductCategoryId
+                                                }).GroupBy(x => new
+                                                {
+                                                    x.ClientDetailId
+                                                }).Select(x => new
+                                                {
+                                                    ClientDetailId = x.Key.ClientDetailId,
+                                                    ProductCategoryList = x.Select(x => new ProductCategoryDto
+                                                    {
+                                                        ProductCategoryId = x.ProductCategoryId,
+                                                        ProductCategoryName = x.ProductCategoryName
+                                                    }).ToList()
+                                                });
+
                 var query = (from clientDetail in clientPersonalDetailQuery
-                             join clientProductCategory in clientProductCategoryQuery on clientDetail.Id equals clientProductCategory.ClientId into clientProductCategoryLeft
-                             from clientProductCategory in clientProductCategoryLeft.DefaultIfEmpty()
-                             join productCategory in productCategoryQuery on clientProductCategory.ProductCategoryId equals productCategory.Id into productCategoryLeft
-                             from productCategory in productCategoryLeft.DefaultIfEmpty()
+                             join agg in productCategoryListQuery on  clientDetail.Id equals agg.ClientDetailId
                              select new ClientDetailResponseDto
                              {
                                  Id = clientDetail.Id,
@@ -261,21 +298,15 @@ namespace YSJU.ClientRegistrationSystem.AppServices.ClientDetailManagement
                                  Address = clientDetail.Address,
                                  PhoneNumber = clientDetail.PhoneNumber,
                                  Email = clientDetail.Email,
-                                 ProductCategoryId = clientProductCategory.ProductCategoryId,
-                                 ProductCategoryName = productCategory.DisplayName,
+                                 ProductCategory = agg.ProductCategoryList,
                                  CreationTime = clientDetail.CreationTime
                              });
 
-                if (input.ProductCategoryId != null)
-                {
-                    query = query.Where(x => x.ProductCategoryId == input.ProductCategoryId);
-                }
-
+                var totalCount = query.Count();
                 var result = query.OrderBy(input.Sorting)
                                   .Skip(input.SkipCount)
                                   .Take(input.MaxResultCount).ToList();
 
-                var totalCount = query.Count();
                 var response = new PagedResultDto<ClientDetailResponseDto>(totalCount, result);
 
                 return response;
@@ -334,11 +365,32 @@ namespace YSJU.ClientRegistrationSystem.AppServices.ClientDetailManagement
                 var productCategoryQuery = await _productCategoryRepository.GetQueryableAsync();
                 var clientProductCategoryQuery = await _clientProductCategory.GetQueryableAsync();
 
+                var productCategoryListQuery = (from clientDetail in clientPersonalDetailQuery
+                                                join clientProductCategory in clientProductCategoryQuery on clientDetail.Id equals clientProductCategory.ClientId into clientProductCategoryLeft
+                                                from clientProductCategory in clientProductCategoryLeft.DefaultIfEmpty()
+                                                join productCategory in productCategoryQuery on clientProductCategory.ProductCategoryId equals productCategory.Id into productCategoryLeft
+                                                from productCategory in productCategoryLeft.DefaultIfEmpty()
+                                                select new
+                                                {
+                                                    clientDetailId = clientDetail.Id,
+                                                    ProductCategoryName = productCategory.DisplayName,
+                                                    ProductCategoryId = productCategory.Id
+                                                }).GroupBy(x => new
+                                                {
+                                                    x.clientDetailId,
+
+                                                }).Select(x => new
+                                                {
+                                                    ClientId = x.Key.clientDetailId,
+                                                    ProductCategoryList = x.Select(x => new ProductCategoryDto
+                                                    {
+                                                        ProductCategoryId = x.ProductCategoryId,
+                                                        ProductCategoryName = x.ProductCategoryName
+                                                    }).ToList()
+                                                });
+
                 var query = (from clientDetail in clientPersonalDetailQuery
-                             join clientProductCategory in clientProductCategoryQuery on clientDetail.Id equals clientProductCategory.ClientId into clientProductCategoryLeft
-                             from clientProductCategory in clientProductCategoryLeft.DefaultIfEmpty()
-                             join productCategory in productCategoryQuery on clientProductCategory.ProductCategoryId equals productCategory.Id into productCategoryLeft
-                             from productCategory in productCategoryLeft.DefaultIfEmpty()
+                             join productCategories in productCategoryListQuery on clientDetail.Id equals productCategories.ClientId
                              select new ClientDetailResponseDto
                              {
                                  Id = clientDetail.Id,
@@ -349,8 +401,7 @@ namespace YSJU.ClientRegistrationSystem.AppServices.ClientDetailManagement
                                  Address = clientDetail.Address,
                                  PhoneNumber = clientDetail.PhoneNumber,
                                  Email = clientDetail.Email,
-                                 ProductCategoryId = clientProductCategory.ProductCategoryId,
-                                 ProductCategoryName = productCategory.DisplayName,
+                                 ProductCategory = productCategories.ProductCategoryList,
                                  CreationTime = clientDetail.CreationTime
                              });
 
@@ -395,7 +446,7 @@ namespace YSJU.ClientRegistrationSystem.AppServices.ClientDetailManagement
                         worksheet.Cells[headingRowIndex, headingColumnIndex++].Value = rowData.Address;
                         worksheet.Cells[headingRowIndex, headingColumnIndex++].Value = rowData.Email;
                         worksheet.Cells[headingRowIndex, headingColumnIndex++].Value = rowData.PhoneNumber;
-                        worksheet.Cells[headingRowIndex, headingColumnIndex++].Value = rowData.ProductCategoryName;
+                        worksheet.Cells[headingRowIndex, headingColumnIndex++].Value = rowData.ProductCategory.Select(x => x.ProductCategoryName).ToList();
                         headingRowIndex++;
                         sNo++;
                     }
